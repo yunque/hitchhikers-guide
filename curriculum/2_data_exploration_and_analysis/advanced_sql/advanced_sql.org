@@ -1,0 +1,664 @@
+#+TITLE: Advanced SQL
+#+SUBTITLE: Using SQL for doing Data Analysis
+#+AUTHOR: Center of Data Science for Public Policy
+#+EMAIL: adolfo@uchicago.edu
+#+STARTUP: showeverything
+#+STARTUP: nohideblocks
+#+PROPERTY: header-args:sql :engine postgresql
+#+PROPERTY: header-args:sql+ :dbhost 0.0.0.0
+#+PROPERTY: header-args:sql+ :dbport 5434
+#+PROPERTY: header-args:sql+ :dbuser food_user
+#+PROPERTY: header-args:sql+ :dbpassword some_password
+#+PROPERTY: header-args:sql+ :database food
+#+PROPERTY: header-args:sql+ :results table drawer
+#+PROPERTY: header-args:shell     :results drawer
+#+PROPERTY: header-args:ipython   :session food_inspections
+
+
+
+* Before we start
+
+** The notes
+
+The code is located in:  [[http://bit.ly/2xBBQ5b][http://bit.ly/2xBBQ5b]]
+
+** Test your connection
+
+If you are using =psql= use the following:
+
+#+BEGIN_EXAMPLE shell
+psql postgresql://attendee:dssg_conference_2017@advanced-sql.dssg.io:80/dssg_conference
+#+END_EXAMPLE
+
+If you are using a graphical client:
+
+#+BEGIN_EXAMPLE yaml
+  host: advanced-sql.dssg.io
+  port: 80
+  username: attendee
+  password: dssg_conference_2017
+  db: dssg_conference
+#+END_EXAMPLE
+
+* The punchline
+
+Databases are not only for *storage* they are for manipulating in an
+efficient way your data: Try to do the data manipulation near to where
+the data is located.
+
+* The food inspections data set
+
+The data represents the inspections made in different facilities in
+the area of Chicago.
+
+There are different types of inspections, different types of
+facilities and different results (or outcomes) of that
+inspections. Also the data contains the
+types of violations and text descriptions in free form about the
+violations.
+
+Obviously, we have spatio-temporal data (i.e. the inspections happen
+in a given time at some place).
+
+* Some basic tasks in a data analysis project
+
+- Cleaning the data
+- Manipulating the data
+- Create new /FeatureS/
+- Create new views of the data
+- Answering analytical questions
+
+* Cleaning and manipulating the data
+
+We already prepared a partial "cleaning" of the data. That data is
+located in the =schema= =cleaned=.
+
+** Hands-on
+
+Expected time: 2 minutes
+
+Feel the data:
+- How many tables are there?
+- Which are the respective columns?
+- How many rows per table?
+- Any idea about how to join them?
+- Look at the inspection =2078651,= How many violations does it had?
+
+Let's move on, for most of the analytical purposes (related to data
+science) we need a consolidated view of the entities in our data,
+i.e. we need to /denormalize/ the data. We will call to this new table
+the /semantic/ view of the data.
+
+If we do a simple join between this two tables, we will get many
+rows per inspection. And that will complicate our future analysis. So
+we need a way of collapse those rows, without losing data.
+
+* Manipulating the data: JSON
+
+=PostgreSQL= supports collapsing several rows using [[https://www.postgresql.org/docs/9.3/static/functions-array.html][arrays]] or [[https://www.postgresql.org/docs/current/static/functions-json.html][JSON]].
+We will transform the rows of the =cleaned.violations= table into =json=
+and we will aggregate those into a =json array=.
+
+We will do this together using the functions  =row_to_json= and =json_agg.=
+
+#+BEGIN_SRC sql
+  select
+         json_agg(
+          row_to_json(v.*)
+         ) as violations
+  from cleaned.violations as v
+  where inspection  = '2078651'
+#+END_SRC
+
+We could improve the output (make it more pretty) using the function =json_build_object=, and
+a simple =group by=
+
+#+BEGIN_SRC sql
+  select
+          v.inspection,
+          v.license_num,
+          v.date,
+          json_agg(
+                   json_build_object('code',v.violation_code,
+                                     'description', v.violation_description,
+                                     'comment',v.violation_comment)
+          ) as violations
+  from cleaned.violations as v
+  where inspection  = '2078651'
+  group by v.inspection, v.license_num, v.date  -- We need a group by since we are using an aggregator function
+#+END_SRC
+
+** Hands-on
+ Estimated time: 1 minute
+ Manipulate the previous query statement
+ and try to join it with the inspections (You should get
+ only one row)
+
+
+* Cleaning your code and (maybe) gaining a little speed: CTEs
+
+It is very probable that you use a sub-query in you previous hands-on.
+
+There is a better way of doing it, and is using [[https://www.postgresql.org/docs/current/static/queries-with.html][Common Table Expressions (CTEs)]]
+also know as /WITH queries/.
+
+This will improve your readability (be nice wih the future you!) and in some cases speed
+improvements
+
+#+BEGIN_SRC sql
+  -- You first define your subquery and assign a name to it
+  -- This will work as a "common table"
+  with violations as (
+       select
+          v.inspection,
+          v.license_num,
+          v.date,
+          json_agg(
+                  json_build_object('code',v.violation_code,
+                                    'description', v.violation_description,
+                                    'comment',v.violation_comment)
+          ) as violations
+        from cleaned.violations as v
+        group by v.inspection, v.license_num, v.date
+  )
+
+  -- Then you can use it
+
+  select i.*, v.violations
+  from cleaned.inspections as i
+  left join violations as v -- Here we are using the "common table"
+  using (inspection)
+#+END_SRC
+
+You can use several CTEs, just remove all except the first =with= and
+separate them by colons. We will show you more examples later in this workshop.
+
+* Querying unstructured data
+
+We created for you the table =semantic.inspections=, and is very similar
+to the results of your last hands-on.
+
+For querying =json= unstructured data, PostgreSQL provides you with the
+operator =->>=. This operator /extracts/ the *value* of the *key* in the json.
+
+We first need to transform the array of =json= objects (/unnest/ it) into
+rows (using =jsonb_array_elements=, and
+then use the operator =->>= for retrieving the value of the specified
+key.
+
+#+BEGIN_SRC sql
+
+  with violations as (
+       select
+          inspection,
+          jsonb_array_elements(violations) as violations -- This returns several rows
+       from semantic.inspections
+       where inspection = '104246'
+  )
+
+  select inspection,
+         violations ->> 'code' as violation_code, -- We want the value of the key 'code'
+         count(*)
+  from violations
+  group by inspection, violation_code
+
+#+END_SRC
+
+** Hands-on
+   Estimated time: 2 minutes
+   Modify this query to get the facility (using =license_num=) in which the
+   inspectors found the biggest number of violation code 40.
+
+
+* "Datawarehousing"
+
+Generate data for a BI dashboard, that shows all total number of
+inspections, and their results,
+per city, facility type, month, year including totals and subtotals
+
+** Hands-on
+   Estimated time: 2 minutes
+   How to solve this using basic sql?
+
+** Datawarehousing functions
+
+=PostgreSQL= overloaded the operator =GROUP BY=, so besides their normal
+use, now you can produce reports of aggregation metrics by sets
+(=GROUPING SETS=),
+hierarchy (=ROLLUP=) and combinations (=CUBE=) in a simple query.
+
+#+BEGIN_SRC sql
+  -- This doesn't give you the subtotals and totals
+  select
+          month,
+          year,
+          city,
+          facility_type,
+          results,
+          count(*) as number_of_inspections
+  from semantic.inspections
+  where year = 2017 and month = 1
+  group by month, year, city, facility_type, results
+  --group by GROUPING SETS (month, year, city, facility_type, results, ())
+  --group by ROLLUP (month, year, city, facility_type, results)
+  --group by CUBE (month, year, city, facility_type, results)
+#+END_SRC
+
+** Hands-on
+   Estimated time: 5 minutes
+   Play with the different commented lines in the example query, if
+   you only one the subtotal per =facility_type= and =city=, Which one
+   you should use?
+
+
+* Analytical Questions: Looking through the window
+
+How do each facility' number of inspections compares to others in
+their facility type? Total of inspections? Average of inspections?
+Distance to the top? Distance from the average? How percentage of
+inspections where used in a particular facility?
+
+** Hands-on:
+   Estimated time: 5 minutes
+   Try to solve this by yourself using only =SELECT=, =GROUP BY=, =HAVING=, =WHERE=
+
+
+* Analytical Questions: Looking through the window
+
+
+** Window functions
+
+ - They are similar to aggregate functions, but instead of operating on
+   groups of rows to produce a single row, they act on rows related to
+   the current row to produce the same amount of rows.
+ - There are several [[https://www.postgresql.org/docs/current/static/functions-window.html][window functions]]
+   like =row_number=, =rank=, =ntile=, =lag=, =lead=, =first_value=, =last_value=,
+   =nth_value=.
+ - And you can use any aggregation functions: =sum=, =count=, =avg=, etc
+ - Those functions are used in [[https://www.postgresql.org/docs/current/static/sql-expressions.html#SYNTAX-WINDOW-FUNCTIONS][window function calls]].
+
+
+#+BEGIN_SRC sql
+
+  with failures_per_facility as (
+  select
+          license_num,
+          facility,
+          facility_type,
+          year,
+          count(*) as inspections
+  from semantic.inspections
+  where year = 2015 and facility_type is not null
+  group by license_num, facility, facility_type, year
+  )
+
+  select
+          year,license_num,facility,facility_type,
+          inspections,
+          sum(inspections) over w1 as "total inspections per type",
+          100*(inspections::decimal/sum(inspections) over w1)::numeric(18,1)  as "% of inspections",
+          (avg(inspections) over w1)::numeric(18,3) as "avg inspections per type",
+          inspections - avg(inspections) over w1 as "distance from avg",
+          first_value(inspections) over w2 as "max inspections per type",
+          inspections - first_value(inspections) over w2 as "distance from top 1",
+          dense_rank() over w2 as rank,
+          (nth_value(inspections,1) over w3 / inspections::decimal)::numeric(18,1) as "rate to top 1",
+          ntile(5) over w2 as ntile
+  from failures_per_facility
+  where facility_type = 'WHOLESALE'
+  window
+         w1 as (partition by facility_type, year),
+         w2 as (partition by facility_type, year order by inspections desc),
+         w3 as (partition by facility_type, year order by inspections desc rows between unbounded preceding and unbounded following)
+  limit 10;
+#+END_SRC
+
+
+** Hands-on
+   Estimated time: 5 minutes
+   Change the previous query to show the number of 'Fail' =results=
+   instead the number of inspections.
+   /Hint:/ Instead of using
+
+#+BEGIN_EXAMPLE sql
+  sum(
+      case results
+          when 'Fail'
+          then 1
+          else 0
+      end
+  ) as failures
+#+END_EXAMPLE
+
+   you can use =count(*) filter (where results = 'Fail')=
+
+* Analytical Questions: Using the previous row
+
+At a given date, number of days since the last inspection?
+
+
+#+BEGIN_SRC sql
+  select
+          license_num,
+          facility,
+          date as inspection_date,
+          lag(date, 1) over w1 as previous_inspection,
+          age(date, lag(date,1) over w1) as time_since_last_inspection
+          from semantic.inspections
+          where facility = 'RAW'
+          window w1 as (partition by license_num order by date asc)
+#+END_SRC
+
+* Analytical Questions: Using some other rows
+
+Number of violations in the last 3 inspections
+
+#+BEGIN_SRC sql
+
+  with violations as (
+  select
+          inspection,
+          license_num,
+          date,
+          jsonb_array_elements(violations) as violations
+  from semantic.inspections
+  ),
+
+  number_of_violations as (
+  select
+          inspection,
+          license_num,
+          date,
+          count(*) as num_of_violations
+  from violations
+  group by inspection, license_num, date
+  )
+
+  select
+          license_num,
+          date,
+          num_of_violations,
+          sum(num_of_violations) over w,
+          array_agg(num_of_violations) over w as previous_violations
+  from number_of_violations
+  where license_num = '1646652'
+  window w as (partition by license_num order by date asc rows between 3 preceding and 1 preceding)
+
+#+END_SRC
+
+** Hands on
+  Estimated time: 5 minutes
+  - Which are the facilities with more changes in the =risk= column
+    (i.e. lower -> medium, medium -> high, high -> medium)? Could you
+    count how to many changes where "up" and how many where "down"?
+
+
+#+BEGIN_SRC sql
+
+  with risks as (
+  select
+          date,
+          license_num,
+          risk,
+          lag(risk,1) over w as previous_risk
+  from semantic.inspections
+  window w as (partition by license_num order by date asc)
+  )
+
+  select
+          extract(year from date) as year,
+          license_num,
+          count(case
+               when risk = 'High' and previous_risk = 'Medium' then 1
+               when risk = 'Medium' and previous_risk = 'Low' then 1
+          end) as up,
+          count(case
+               when risk = 'Medium' and previous_risk = 'High' then 1
+               when risk = 'Low' and previous_risk = 'Medium' then 1
+          end) as down
+  from risks
+  where  license_num != '0'
+  group by license_num, extract(year from date)
+  order by year, up desc, down desc
+  limit 10
+#+END_SRC
+
+
+* Meaning in text
+
+Which are the most common words descriptions of the violations?
+
+** Full Text Search
+
+PostgreSQL' has a lot of capabilities for working with [[https://www.postgresql.org/docs/current/static/textsearch.html][text data]]
+(/fuzzy search/, /n-grams/, etc) that you can use for /searching inside/
+the text.
+
+But the same techniques allows you to do some text analysis. The first
+steps of it are: removing stop words, stemming, calculating
+frequencies and then /vectorization/.
+
+See the following example:
+
+#+BEGIN_SRC sql
+
+  select
+         violation_comment as comment,
+         replace(plainto_tsquery(violation_comment)::text, ' & ', ' ') as cleaned_comment,
+         to_tsvector(violation_comment) as vectorized_comment
+  from cleaned.violations limit 1;
+
+#+END_SRC
+
+Let's create a *word count* (from here you can create a word cloud, if
+you like it). We will use the table =text_analysis.comments=
+
+#+BEGIN_SRC sql
+  select
+          regexp_split_to_table(cleaned_comment, '\s+') as word,
+          count(1) as word_count
+  from text_analysis.comments
+  group by word
+  order by word_count
+  desc limit 50;
+#+END_SRC
+
+
+* Spatial awareness
+
+Which restaurants with high risk are located near to public schools?
+
+#+BEGIN_SRC sql
+  select
+          distinct on (license_num, facility, s.school_nm)
+          license_num, facility, s.school_nm as "school"
+  from gis.public_schools as s join semantic.inspections as i
+       on ST_DWithin(geography(s.geom), geography(i.location), 200) -- This is the distance in meters
+  where facility_type = 'RESTAURANT' and risk = 'High';
+#+END_SRC
+
+** Spatial queries
+
+PostgresSQL has an extension called [[http://postgis.net/][PosGIS]], that allows you to do *Spatial Joins*, i.e. use geographical data
+to answer questions as /What is near?/ /What is inside this area?/ /What intersects or connect with this?/
+
+* Hands-on
+  Estimated time: 5 min
+  - There is another table: =gis.boundaries=, use the function
+    =ST_Contains= to calculate the number of facilities per zip code?
+    Compare that with the count using =zip_code= column in the
+    =semantic.inspections=
+    *Hint*: Use a CTE...
+
+* Hands-on
+  Estimated time: 10min
+  - Generate a list with the top 5 facilities with the higher number of
+    violations which are near to public schools
+
+* Appendix
+
+** Creating the database
+
+First the =raw.inspections= table
+
+#+BEGIN_SRC sql
+  create schema if not exists raw;
+
+  create table raw.inspections (
+  inspection varchar not null,
+  DBA_Name varchar,
+  AKA_Name varchar,
+  license_Num decimal,
+  facility_type varchar,
+  risk varchar,
+  address varchar,
+  city varchar,
+  state varchar,
+  zip varchar,
+  date date,
+  type varchar,
+  results varchar,
+  violations varchar,
+  latitude decimal,
+  longitude decimal,
+  location varchar
+  );
+#+END_SRC
+
+Then we fill that table with data
+
+#+BEGIN_SRC sql
+  \copy raw.inspections from program 'curl "https://data.cityofchicago.org/api/views/4ijn-s7e5/rows.csv?accessType=DOWNLOAD"' HEADER CSV
+#+END_SRC
+
+After that, we created a more "clean" version of the data
+
+#+BEGIN_SRC sql
+     create schema if not exists cleaned ;
+     drop table if exists cleaned.inspections cascade;
+
+     create table cleaned.inspections as (
+     select
+     inspection,
+     btrim(results) as results,
+     license_num,
+     dba_name as facility,
+     aka_name as facility_aka,
+     upper(facility_type) as facility_type,
+     substring(risk from '\((.+)\)') as risk,
+     address,
+     zip as zip_code,
+     btrim(upper(city)) as city,
+     substring(btrim(upper(type)) from 'CANVASS|TASK FORCE|COMPLAINT|FOOD POISONING|CONSULTATION|LICENSE') as type,
+     date,
+     extract(year from date) as year,
+     extract(month from date) as month,
+     extract(isodow from date) as day_of_week, -- Monday: 1 ... Sunday: 7
+     case
+     when extract(isodow from date) in (6,7) then TRUE
+     else FALSE
+     end as is_weekend,
+     extract(week from date) as week_of_year,
+     extract(quarter from date) as quarter,
+     ST_SetSRID(ST_MakePoint(longitude, latitude),4326) as location
+     from raw.inspections
+     where results in ('Fail', 'Pass', 'Pass w/ Conditions') and license_num is not null
+     )
+
+#+END_SRC
+
+#+BEGIN_SRC sql
+  create schema if not exists cleaned ;
+  drop table if exists cleaned.violations cascade;
+
+  create table cleaned.violations as (
+  select
+  inspection,
+  license_num,
+  date,
+  btrim(tuple[1]) as violation_code,
+  btrim(tuple[2]) as violation_description,
+  btrim(tuple[3]) as violation_comment from
+  (
+  select
+  inspection,
+  license_num,
+  date,
+  regexp_split_to_array(
+  regexp_split_to_table(coalesce(violations, '.- Comments:'), '\|'),   -- We don't want to loose inspections
+  '\.|- Comments:') as tuple
+  from raw.inspections
+  where results in ('Fail', 'Pass', 'Pass w/ Conditions') and license_num is not null
+  ) as t
+  )
+#+END_SRC
+
+The =semantic.inspections= table
+
+#+BEGIN_SRC sql
+  create table semantic.inspections as (  -- You first define your subquery and assign a name to it
+    -- This will work as a "common table"
+    with violations as (
+         select
+            v.inspection,
+            v.license_num,
+            v.date,
+            json_strip_nulls(json_agg(
+                    json_build_object('code',v.violation_code,
+                                      'description', v.violation_description,
+                                      'comment',v.violation_comment)
+            )) as violations
+          from cleaned.violations as v
+          group by v.inspection, v.license_num, v.date
+    )
+    -- Then you can use it
+    select i.*, v.violations
+    from cleaned.inspections as i
+    left join violations as v -- Here we are using the "common table"
+    using (inspection));
+
+  alter table semantic.inspections alter column violations type jsonb;
+
+  create index semantc_inspections_inspection_idx on semantic.inspections (inspection);
+  create index semantc_inspections_license_idx on semantic.inspections (license_num);
+  create index semantc_inspections_facility_type_idx on semantic.inspections (facility_type);
+  create index semantc_inspections_date_idx on semantic.inspections (date);
+  create index semantc_inspections_violations_idx on semantic.inspections using gin(violations);
+
+
+  CREATE INDEX semantic_inspections_location_idx ON semantic.inspections  USING GIST (geography(location));
+  CREATE INDEX gis_boundaries_geom_idx ON gis.boundaries  USING GIST (geography(geom));
+  CREATE INDEX gis_public_schools_geom_idx ON gis.public_schools  USING GIST (geography(geom));
+
+#+END_SRC
+
+And finally the table for text analytics:
+
+#+BEGIN_SRC sql
+
+  create schema text_analysis;
+
+  drop table if exists text_analysis.comments ;
+
+  create table text_analysis.comments as (
+
+  with violations as (
+       select
+          inspection,
+          license_num,
+          jsonb_array_elements(violations) as violations
+          from semantic.inspections
+  ), cleaned as (
+     select
+          inspection,
+          license_num,
+          violations ->> 'comment' as original_comment,
+          replace(plainto_tsquery(violations ->> 'comment')::text, ' & ', ' ') as cleaned_comment,
+          to_tsvector(violations ->> 'comment') as vectorized_comment
+     from violations
+     where btrim(violations ->> 'comment') <> ''
+  )
+
+  select * from cleaned
+  )
+#+END_SRC
