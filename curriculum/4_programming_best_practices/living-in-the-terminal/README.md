@@ -136,8 +136,8 @@ $ echo happy_birthday.{wav,mp3,flac}
 We can write functions in shell scripts as well!
 The syntax looks like this...
 ```
-function_name(args) {
-    function_body
+function name(args) {
+    body
 }
 ```
 
@@ -298,6 +298,32 @@ You can also sponsor the development of Vim.  Vim sponsors can vote for
 features.  See sponsor.  The money goes to Uganda anyway.
 
 ## Bonus points
+
+### Linux's Filesystem Hierarchy Standard (FHS)
+Linux systems conform to a [filesystem hierarchy standard](http://refspecs.linuxfoundation.org/FHS_3.0/fhs/index.html) that structures where source code, binaries, etc. are stored on the system for everything from user-specific installations, system-wide programs, peripheral media and even kernel modules.  
+
+```
+/
+|_bin/
+|_boot/
+|_dev/
+|_etc/
+|_home/
+|_lib/
+|_media/
+|_mnt/
+|_opt/
+|_root/
+|_sys/
+|_tmp/
+|_usr/
+|_var/
+```
+
+Packages installed via the package manager (e.g. apt-get, pacman, yum, etc.) are installed @ [...].  
+To install your own packages from a tarball, gzip, etc. standard practice recommends to install those programs @ /usr/local or /opt (see discussion @ [unix.stackexchange Q.Into which directory should I install programs in Linux?](https://unix.stackexchange.com/questions/127076/into-which-directory-should-i-install-programs-in-linux) )
+
+
 ### Rogue terminals
 We all make mistakes. Sometimes we make mistakes in infinite loops.
 What do we do when "Ctrl+C" is not enough?
