@@ -157,10 +157,10 @@ else
 fi
 ```  
 
-Keyword arguments are somewhat involved to implement, requiring the use of the [getops](https://ss64.com/bash/getopts.html) builtin module as well as cases. `getopts` parses the arguments while cases trigger the corresponding logic. There are special characters to denote the cases of unknown (`?`) or insufficient (`:`) arguments.  
+Keyword arguments are somewhat involved to implement, requiring the use of the [getops](https://ss64.com/bash/getopts.html) builtin module as well as cases (check out [this tutorial](http://wiki.bash-hackers.org/howto/getopts_tutorial) for a more detailed breakdown of the logic). `getopts` parses the arguments while cases trigger the corresponding code. There are special characters to denote the cases of unknown (`?`) or insufficient (`:`) arguments.  
 
 ```
-while getopts ":a:" opt; do
+while getopts ":a:z:" opt; do
   case $opt in
     a)
       echo "Parameter -a has value $OPTARG" >&2;
@@ -178,6 +178,14 @@ while getopts ":a:" opt; do
   esac
 done
 ```
+
+So for example calling a function `theFunc` made up of just the above while clause...  
+`myFunc -a "Once upon a time..." -z "The End."`  
+returns...  
+```
+Parameter -a has value "Once upon a time..."
+Parameter -z has value "The End."
+```  
 
 You can even define shell functions inside your ~/.bashrc profile when a simple alias just won't do...
 For example, run a jupyter notebook remotely through an SSH tunnel and forward the connection to your localhost:
