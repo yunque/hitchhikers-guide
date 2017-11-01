@@ -136,9 +136,47 @@ $ echo happy_birthday.{wav,mp3,flac}
 We can write functions in shell scripts as well!
 The syntax looks like this...
 ```
-function name(args) {
+function theFunc {
     body
 }
+```  
+
+We can include either positional or keyword arguments though they each require different syntax.  
+
+Positional arguments are addressed by the `$X` where X is the positional order of the argument (`$0` denotes the script, i.e. the 0th argument on the terminal ;) ). We then pass these arguments to a variable by writting `var1=$1; var2=$2;` for as many arguments as we like. If the number of arguments to be passed is of importance (e.g. if the function should have different purposes depending on how many arguments are passed to it, we can get the number of arguments with `$#`, and then apply the relevant conditions. For example if our function requires 3 arguments to operate, we can raise an error if any other number of arguments is passed, e.g.:  
+
+```
+if [ $# -ne 3 ]; then
+  echo "ERROR: theFunc requires 3 arguments.";
+  exit 1
+else
+  arg1=$1;
+  arg2=$2;
+  arg3=$3;
+  echo "Positional arguments (in order of appearance):" $1 $2 $3;
+fi
+```  
+
+Keyword arguments are somewhat involved to implement, requiring the use of the [getops](https://ss64.com/bash/getopts.html) builtin module as well as cases. `getopts` parses the arguments while cases trigger the corresponding logic. There are special characters to denote the cases of unknown (`?`) or insufficient (`:`) arguments.  
+
+```
+while getopts ":a:" opt; do
+  case $opt in
+    a)
+      echo "Parameter -a has value $OPTARG" >&2;
+      ;;
+    z)
+      echo "Parameter -z has value $OPTARG" >&2;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2;
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2;
+      exit 1
+      ;;
+  esac
+done
 ```
 
 You can even define shell functions inside your ~/.bashrc profile when a simple alias just won't do...
