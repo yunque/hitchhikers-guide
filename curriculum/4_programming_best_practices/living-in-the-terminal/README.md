@@ -33,7 +33,7 @@ This is helpful when you're not too confident about what your command will do.
 ### Mind the command
 The first rule of command line is "be careful what you wish for". The computer will do exactly what you say, but human's may have trouble speaking the computer's language. This can be dangerous when you're running commands like `rm` (remove), or `mv` (move, also used for renaming files). You can "echo" your commands to just print the command text without actually running the command. This can save your files and sometimes even your jorb! (Tip! Don't delete all your data with a misplaced `mv`)  
 
-You can create dummy files to use for this tutorial sing the `touch` command, in case you don't want to operate on real files until you're comfortable with these commands. Let's start by creating a file with space bars in the name.  
+You can create dummy files to use for this tutorial using the `touch` command, in case you don't want to operate on real files until you're comfortable with these commands. Let's start by creating a file with space bars in the name.  
 
 `touch space\ bars\ .txt`
 
@@ -236,7 +236,7 @@ Ctrl+b+x
 Ctrl+b+c
 # Split windows horizontally into two
 Ctrl+b+"
-# Split windows vertically into two 
+# Split windows vertically into two
 Ctrl+b+%
 # Tohttps://realpython.com/blog/python/vim-and-python-a-match-made-in-heaven/ggle between horizontal/vertical splits
 Ctrl+b+space
@@ -245,18 +245,18 @@ Tmux can easily be configured by editing the tmux configuration file at `~/.tmux
 
 If you search "tmux cheatsheet" on (DuckDuckGo.com)[https://duckduckgo.com], the preview search result reveals some more useful commands [:
 
-# VIM (Vi iMproved) - text editor 
-**Why bother? **
+# VIM (Vi iMproved) - text editor
+## Why bother?  
 Vim is a powerful, lightweight, open-source, cross-platform text editor, that comes pre-installed on Unix systems. Vi was written in 1976 by Bill Joy at Sun Microsystems, and has been improved in 1991 to Vim.
 
-Vim was designed for maximum efficiency and minimum bandwidth when working on old modems. It does not require use of the mouse or arrow keys. Much of learning Vim is just habit and muscle memory, in the first place this can be frustrating, but soon becomes second nature. 
+Vim was designed for maximum efficiency and minimum bandwidth when working on old modems. It does not require use of the mouse or arrow keys. Much of learning Vim is just habit and muscle memory, in the first place this can be frustrating, but soon becomes second nature.
 
-**But I'm scared?  **
-Don't worry here are some useful hints, tips, and tricks for using vim. 
+## But I'm scared?  
+Don't worry here are some useful hints, tips, and tricks for using vim.
 
-Pleas note if at any point during this session you feel bewildered, nauseous, or perhaps euphoric, remain calm and press the `Esc` key to get back to normal.
+Please note if at any point during this session you feel bewildered, nauseous, or perhaps euphoric, remain calm and press the `Esc` key to get back to normal.
 
-**Where should I start?  **
+## Where should I start?  
 A comprehensive although slightly dry start point for learning vim is through the `vimtutor` document available as standard with vim (just type `vimtutor` and hit Enter).
 
 A more fun way to get used to moving in vim is playing this fun maze game.
@@ -265,14 +265,14 @@ https://vim-adventures.com/
 A useful cheatsheet:
 https://vim.rtorr.com/
 
-**The Bare Necessities: **
+## The Bare Necessities:  
 
 Vim has three modes:
 1. Normal: this is for normal movement through a file (press I for Insert, or V for visual)
 2. Insert: this is for editing files and adding text (press Esc to get back to Normal)
 3. Visual: this is for highlighting lines in files (press Esc to get back to Normal)
 
-## Navigation:
+### Navigation:  
  * Movement is through `h`, `j`, `k`, and `l`
  * go to the top of the file with `gg`
  * go to the end of the file with `G`
@@ -284,7 +284,7 @@ Vim has three modes:
  * jump to the start of the line `0`
  * jump to the end of the line `$`
 
-## Editing:
+### Editing:  
  * delete a character `x`
  * delete a line `dd`
  * delete 10 lines `10dd`
@@ -302,7 +302,7 @@ Vim has three modes:
  * start editing on line below `o`
  * start editing at end of line `A`
 
-## Highlighting (visual mode):
+### Highlighting (visual mode):
  * select a line `V`
  * select 8 lines `8V`
  * yank or copy `y`
@@ -311,30 +311,30 @@ Vim has three modes:
      * see next search match `n`
      * see previous search match `N`
 
-## Exiting
+### Exiting
 Okay enough, get me out of here:
- * quit a  file `:q` 
+ * quit a  file `:q`
  * write changes to a file `:w` (normal humanoids call this saving a file)
- * no, really get me out of here, I don't care about saving `:q!` 
+ * no, really get me out of here, I don't care about saving `:q!`
 
-**The stuff they don't teach: **
+## The stuff they don't teach:  
  * `:%s/old/new/gc` substitute old pattern for new globally but check each (commonly humanoids refer to this as find and replace)
  * `:10,20s/old/new/g` substitute the old pattern for the new only between lines 10 and 20
  * select a column of text `Ctrl+V+j+j+j+j`
  * comment a column of text `Ctrl+V+j+j+j+j+#`
  * go to file explorer `:Ex`
  * open a file on my remote `vim scp://path/to/file/`
- * change your `~/.vimrc` 
+ * change your `~/.vimrc`
      * `set nu` add numbering
      * `set hlsearch` highlight search results
 
 If you are convinced and want to go one step further you can configure vim as an  IDE for python development here
   https://realpython.com/blog/python/vim-and-python-a-match-made-in-heaven/
-  
-**vim promotes social good**
+
+## vim promotes social good  
 Vim is Charityware.  You can use and copy it as much as you like, but you are
 encouraged to make a donation for needy children in Uganda.  Please see kcc
-below or visit the ICCF web site, available at these URLs: 
+below or visit the ICCF web site, available at these URLs:
 
         http://iccf-holland.org/
         http://www.vim.org/iccf/
@@ -343,7 +343,7 @@ below or visit the ICCF web site, available at these URLs:
 You can also sponsor the development of Vim.  Vim sponsors can vote for
 features.  See sponsor.  The money goes to Uganda anyway.
 
-## Bonus points
+# Bonus points
 
 ### Linux's Filesystem Hierarchy Standard (FHS)
 Linux systems conform to a [filesystem hierarchy standard](http://refspecs.linuxfoundation.org/FHS_3.0/fhs/index.html) that structures where source code, binaries, etc. are stored on the system for everything from user-specific installations, system-wide programs, peripheral media and even kernel modules.  
