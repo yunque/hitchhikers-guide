@@ -238,7 +238,7 @@ Ctrl+b+c
 Ctrl+b+"
 # Split windows vertically into two
 Ctrl+b+%
-# Tohttps://realpython.com/blog/python/vim-and-python-a-match-made-in-heaven/ggle between horizontal/vertical splits
+# Toggle between horizontal/vertical splits
 Ctrl+b+space
 ```
 Tmux can easily be configured by editing the tmux configuration file at `~/.tmux.conf`
