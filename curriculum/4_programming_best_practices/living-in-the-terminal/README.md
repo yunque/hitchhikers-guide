@@ -325,8 +325,8 @@ Okay enough, get me out of here:
  * go to file explorer `:Ex`
  * open a file on my remote `vim scp://path/to/file/`
  * change your `~/.vimrc`
-     * `set nu` add numbering
-     * `set hlsearch` highlight search results
+     * `set nu` add numbering  
+     * `set hlsearch` highlight search results
 
 If you are convinced and want to go one step further you can configure vim as an  IDE for python development here
   https://realpython.com/blog/python/vim-and-python-a-match-made-in-heaven/
