@@ -371,10 +371,10 @@ To install your own packages from a tarball, gzip, etc. standard practice recomm
 
 
 ### Rogue terminals
-We all make mistakes. Sometimes we make mistakes in infinite loops.
-What do we do when "Ctrl+C" is not enough?
-`top` or `htop` allow us to see what processes are running on our computer. (cf. System Monitor @ Mac)
-Every process has an ID (`pid`) which we can use to send a `kill` command to it.
+We all make mistakes. Sometimes we make mistakes in infinite loops.  
+What do we do when "Ctrl+C" is not enough?  
+`top` or `htop` allow us to see what processes are running on our computer. (cf. System Monitor @ Mac)  
+Every process has an ID (`pid`) which we can use to send a `kill` command to it.  
 
 ```
 ps -ef | grep badprocess | awk '{print $2}' | kill `xargs $1`
@@ -393,7 +393,25 @@ NUM_JOBS=16
 parallel -j=$NUM_JOBS --dry-run <script.sh>
 ```
 
-Remove `--dry-run` to actually run the script ;) dry-run shows you what will happen without actually running any code - it's a good way to double-check the expected behaviour of your script before.
+Remove `--dry-run` to actually run the script ;) dry-run shows you what will happen without actually running any code - it's a good way to double-check the expected behaviour of your script before.  
+
+You can parallelise the script over multiple arguments, which can be useful when training models over ranges of hyperparameters. In the example below, the script takes 3 positional arguments and we want to run the script for every possible combination of a range of hyperparameter values: the 1st parameter iterates over 0.01, 0.1, and 1.0, the 2nd parameter takes values of 16, 32, 64, and finally the 3rd parameter runs through 1, 2, 3.
+
+```
+parallel -j=$NUM_JOBS --dry-run <script.sh> {1} {2} {3} ::: 0.01 0.1 1.0 ::: 16 32 64 ::: 1 2 3
+```
+
+The result is equivalent to running the following scripts as independent processes:
+```
+script.sh 0.01 16 1
+script.sh 0.01 16 2
+script.sh 0.01 16 3
+script.sh 0.01 32 1
+script.sh 0.01 32 2
+script.sh 0.01 32 3
+...
+script.sh 1.0 64 3
+```
 
 
 
